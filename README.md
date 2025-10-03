@@ -1,25 +1,71 @@
-# Unifi Controller
+# UniFi Controller (Docker)
+
+A Dockerized UniFi Network Controller to manage UniFi Access Points and other UniFi devices.
+
+---
 
 ## Setup
 
-1. Create .env file with following variables:
+1. Create a `.env` file with the following variables:
+
+   ```bash
+   ROOT_PASSWORD=<YOUR_PASSWORD>
+   UNIFI_DB_PASSWORD=<YOUR_PASSWORD>
+   ```
+
+2. Start the container:
+
+   ```bash
+   docker compose up -d
+   ```
+
+3. Open the UniFi Controller web interface at:
+
+   ```
+   https://<HOST-IP>:8443
+   ```
+
+   and complete the **first-run wizard**.
+
+---
+
+## Device Adoption
+
+UniFi devices (e.g., Access Points) need to know how to reach the controller.
+Because the controller runs inside Docker, the internal container IP is **not accessible** to devices on your LAN. You must set the **Inform Host** to your Docker host’s LAN IP (or a hostname reachable by your devices).
+
+### Configure Inform Host
+
+1. In the UniFi web interface, go to:
+   **Settings → System → Advanced → Inform Host**
+
+2. Enter your Docker host’s LAN IP or hostname (e.g., `192.168.1.50`).
+   Check the **Override Inform Host** box.
+
+   > ⚠️ The exact location of this setting may vary between UniFi versions.
+   > If you don’t see it, search for **“Inform”** or **“Inform Host”** in the settings.
+
+---
+
+### Manual Adoption via SSH
+
+If a device does not appear for adoption automatically, you can manually point it to the controller:
+
+```bash
+ssh ubnt@<AP-IP>
+set-inform http://<HOST-IP>:8080/inform
 ```
-ROOT_PASSWORD=<YOUR_PASSWORD>
-UNIFI_DB_PASSWORD=<YOUR_PASSWORD>
-```
-2. Run container with `docker compose up -d`
-3. The webui is available at https://ip:8443⁠, setup with the first run wizard.
 
-## Adoption
+* Default device SSH password: `ubnt`
+* `<AP-IP>` = the IP address of your Access Point
+* `<HOST-IP>` = the LAN IP of your Docker host (the same one you used in the Inform Host setting)
 
-For Unifi to adopt other devices, e.g. an Access Point, it is required to change the inform IP address. Because Unifi runs inside Docker by default it uses an IP address not accessible by other devices. To change this go to Settings > System > Advanced and set the Inform Host to a hostname or IP address accessible by your devices. Additionally the checkbox "Override" has to be checked, so that devices can connect to the controller during adoption (devices use the inform-endpoint during adoption).
+Run the `set-inform` command twice: the first attempt makes the device contact the controller, the second confirms adoption.
 
-Please note, Unifi change the location of this option every few releases so if it's not where it says, search for "Inform" or "Inform Host" in the settings.
+---
 
-In order to manually adopt a device take these steps:
+## Notes
 
-```
-ssh ubnt@$AP-IP
-set-inform http://$address:8080/inform
-```
-The default device password is ubnt. $address is the IP address of the host you are running this container on and $AP-IP is the Access Point IP address.
+* All UniFi devices on your network (AP1, AP2, AP3, etc.) use the **same controller address** (`<HOST-IP>`).
+* Ensure ports `8080` (inform) and `8443` (web UI) are accessible on your Docker host.
+* After adoption, devices will remember the controller address and no longer need manual intervention.
